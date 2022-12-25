@@ -1,31 +1,23 @@
-import * as vscode from "vscode";
+import * as vscode from 'vscode';
+import * as log4js from 'log4js';
+
+const logger = log4js.getLogger();
 
 interface LllTaskDefinition extends vscode.TaskDefinition {
   src?: string;
 }
 
-export function activate(context: vscode.ExtensionContext) {
-  console.log(
-    'Congratulations, your extension "line-length-linter" is now active!'
-  );
-
-  const disposable = vscode.tasks.registerTaskProvider("lll", {
-    provideTasks: getLllTasks,
-    // 現在、resolveTaskは未実装
-    resolveTask: resolveTask,
-  });
-  context.subscriptions.push(disposable);
-
-}
-
 /**
  * シェルコマンドを作成する
  */
-function createCommand(settings: LllTaskDefinition, scope: vscode.WorkspaceFolder):vscode.ShellExecution {
+function createCommand(
+  settings: LllTaskDefinition,
+  scope: vscode.WorkspaceFolder,
+):vscode.ShellExecution {
   return new vscode.ShellExecution(
-    "lll",
-    [".", "--skiplist", "node_modules"],
-    { cwd: scope.uri.fsPath }
+    settings.type,
+    ['.', '--skiplist', 'node_modules'],
+    { cwd: scope.uri.fsPath },
   );
 }
 
@@ -33,7 +25,6 @@ function createCommand(settings: LllTaskDefinition, scope: vscode.WorkspaceFolde
  * 自動検出タスクを作成する
  */
 async function getLllTasks(): Promise<vscode.Task[]> {
-
   const tasks: vscode.Task[] = [];
 
   if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
@@ -41,31 +32,44 @@ async function getLllTasks(): Promise<vscode.Task[]> {
     return tasks;
   }
 
-  for (const workspaceFolder of vscode.workspace.workspaceFolders) {
+  vscode.workspace.workspaceFolders.forEach((workspaceFolder) => {
     // ワークスペースごとのタスクを生成
-    const taskDefinition = { type: "lll" };
-    let task = new vscode.Task(
+    const taskDefinition = { type: 'lll' };
+    const task = new vscode.Task(
       taskDefinition,
       workspaceFolder,
-      "lint " + workspaceFolder.name,
-      "lll",
+      `lint ${workspaceFolder.name}`,
+      'lll',
       createCommand(taskDefinition, workspaceFolder),
-      "$lll"
+      '$lll',
     );
     tasks.push(task);
-  }
+  });
   return tasks;
 }
 
 /**
  * tasks.jsonから、実行可能なタスクを作成する
  */
-async function resolveTask(task: vscode.Task): Promise<vscode.Task> {
+async function getTask(): Promise<vscode.Task> {
+  let task: vscode.Task;
   const settings = task.definition as LllTaskDefinition;
   task.execution = createCommand(settings, task.scope as vscode.WorkspaceFolder);
-  task.source = "lll";
-  task.problemMatchers = ["$lll"];
+  task.source = 'lll';
+  task.problemMatchers = ['$lll'];
   return task;
+}
+
+export function activate(context: vscode.ExtensionContext) {
+  logger.info(
+    'Congratulations, your extension "line-length-linter" is now active!',
+  );
+
+  const disposable = vscode.tasks.registerTaskProvider('lll', {
+    provideTasks: getLllTasks,
+    resolveTask: getTask, // TODO: 現在、getTaskは未実装
+  });
+  context.subscriptions.push(disposable);
 }
 
 // this method is called when your extension is deactivated
