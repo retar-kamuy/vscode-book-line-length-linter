@@ -1,7 +1,10 @@
 # line-length-linter taskprovider
 ## インストールコマンド
 ```powershell
-npm installl --save-dev eslint
+npm init
+npm install --global typescript
+tsc --init
+npm install --save-dev eslint
 npx eslint --init
 ```
 
@@ -49,3 +52,51 @@ https://qiita.com/sugurutakahashi12345/items/df736ddaf65c244e1b4f#%E6%96%B9%E6%B
 ```
 npm install log4js @types/log4js
 ```
+
+# TypeScriptにおけるデバッグ方法
+## VSCode設定手順
+* .vscode/tasks.jsonへTypeScriptのビルドタスクを記述
+```json
+{
+    "type": "typescript",
+    "tsconfig": "tsconfig.json",
+    "problemMatcher": [
+    	"$tsc"
+    ],
+    "group": "build",
+    "label": "tsc: build - tsconfig.json"
+}
+```
+* `.vscode/launch.json`を作成し、`preLaunchTask`へ`task.json`のビルドタスクを設定
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "プログラムの起動",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}\\src\\index.ts",
+            "outFiles": [
+                "${workspaceFolder}/**/*.js"
+            ],
+            "preLaunchTask": "tsc: build - tsconfig.json",
+        }
+    ]
+}
+```
+
+* tsconfig.jsonの`sourceMap`を`true`へ設定することで、jsとtsへ紐づけ、tsファイルへのブレークポイント設定をjsファイルへ反映
+```diff
+{
+    "compilerOptions": {
++       "sourceMap": true,
+    },
+}
+```
+
+## 参考情報
+https://zenn.dev/byebyeworld/articles/vscode-typescript-debug#%E3%83%86%E3%82%B9%E3%83%88%E7%94%A8%E3%81%AE%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB-debug.ts%E3%82%92%E4%BD%9C%E6%88%90
